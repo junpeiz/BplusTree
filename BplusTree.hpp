@@ -153,7 +153,7 @@ void BplusTree<T>::split(bpt_node<T> * node)
 		mid_key = node->key[Degree / 2 ];
 	}
 
-	if (node->is_root)
+	if(node->is_root)
 	{
 		node->is_root = false;
 		root = new_bpt_node();
@@ -163,9 +163,21 @@ void BplusTree<T>::split(bpt_node<T> * node)
 		root->pointer[1] = new_node;
 		root->key_num = 1;
 		node->father = new_node->father = root;
+		return;
 	}
 	else
 	{
+		if(!node->is_leaf)
+		{
+
+		for (int i = 1;i<new_node->key_num; i++)
+		{
+			new_node->key[i-1] = new_node->key[i];
+			new_node->pointer[i-1] = new_node->pointer[i];
+		}
+		new_node->key_num--;
+		}
+
 		new_node->father = node->father;
 		Insert((bpt_node<T> *)node->father, mid_key, (void *)new_node);
 	}
