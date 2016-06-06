@@ -1,8 +1,19 @@
+/* 
+ * created by Lu Jialin @ Zhejiang University
+ *
+ * inspired by the introdution in book <Database System Concepts> (sixth edition) by A.Silberschatz , H.F.Korth and S.Sudarshan
+ *
+ * intended for the final project of the course "database system" to create a miniSQL
+ *
+ * B+ tree is used for efficient manageing (indexing , ordering and updating data in storage component)  
+ *
+ */
+
 #ifndef BPLUSTREE_H
 #define BPLUSTREE_H
 
-#define Degree 21
-//every node can store Degree-1 values
+#define Degree 4 
+//every node can store Degree-1 values at most
 
 #include <iostream>
 #include <string>
@@ -34,13 +45,17 @@ template<typename T>
 class BplusTree
 {
 public:
+	//consists of a B plus tree and index info
 	bpt_node<T> * root;
 	string table_name;
 	string index_name;
 
 	BplusTree();
 	~BplusTree();
+	
+	//return a new b plus tree node with initial value
 	bpt_node<T> * new_bpt_node();
+	//find the leaf node of specified value 
 	bpt_node<T> * Find(T value);
 	void Insert(bpt_node<T> * node, T value, void* record);
 	void Delete(bpt_node<T> * node, T value);
@@ -108,7 +123,7 @@ bpt_node<T> * BplusTree<T>::Find(T value)
 		for (int i = 0; i <= now->key_num; i++)
 			if (i == now->key_num || value < now->key[i])
 			{
-				now = (bpt_node<T> *)now->pointer[i];
+ 				now = (bpt_node<T> *)now->pointer[i];
 				break;
 			}
 	}
@@ -120,14 +135,14 @@ void BplusTree<T>::split(bpt_node<T> * node)
 {
 	bpt_node<T> *new_node = new_bpt_node();
 	int mid_key = node->key[Degree / 2];
-	new_node->key_num = Degree - Degree / 2 - 1;
-	for (int i = 0; i < new_node->key_num; i++)
+	new_node->key_num = Degree - Degree / 2 ;
+	for (int i = 0; i <= new_node->key_num; i++)
 	{
-		new_node->key[i] = node->key[i + (Degree / 2 + 1)];
-		new_node->pointer[i] = node->pointer[i + (Degree / 2 + 1)];
+		new_node->key[i] = node->key[i + (Degree / 2)];
+		new_node->pointer[i] = node->pointer[i + (Degree / 2)];
 	}
 	new_node->pointer[new_node->key_num] = node->pointer[Degree];
-	node->key_num = Degree / 2;
+	node->key_num = Degree / 2-1;
 
 	if (node->is_leaf)
 	{
@@ -135,7 +150,7 @@ void BplusTree<T>::split(bpt_node<T> * node)
 		new_node->pointer[0] = node->pointer[0];
 		node->pointer[0] = new_node;
 		new_node->is_leaf = true;
-		mid_key = node->key[Degree / 2 + 1];
+		mid_key = node->key[Degree / 2 ];
 	}
 
 	if (node->is_root)
@@ -215,13 +230,13 @@ void BplusTree<T>::query_single(T value, vector<char*> &query_res)
 	query_res.clear();
 	bpt_node<T> * temp = Find(value);
 	for (int i = 0; i < temp->key_num; i++)
-		if (key == temp->key[i]){
+		if (value == temp->key[i]){
 			query_res.push_back((char *)temp->pointer[i+1]);
 			return;
 		}
 	if (temp->key_num >= 2){
 		for (int i = 0; i < temp->key_num - 1; i++)
-			if (key < temp->key[i] && key > temp->key[i + 1])
+			if (value < temp->key[i] && value> temp->key[i + 1])
 				query_res.push_back((char *)temp->pointer[i + 1]);
 	}
 	else
@@ -264,22 +279,53 @@ void BplusTree<T>::query_range(T value1, T value2, vector<char*> &query_res)
 }
 
 template<typename T>
-void print_bpt(bpt_node<T> * node)
+void print_bpt(bpt_node<T> * node,int depth)
 {
 	if (node == NULL)
 		return;
 	if (node->is_leaf)
-		for (int i = 0; i < node->key_num; i++)
-			cout << node->key[i] <<endl;
+	{
+
+
+			for(int j =0;j<=depth-1;j++)
+				cout<<" ";
+			cout<<" "<<" key number is "<<node->key_num<<endl;	
+	for (int i = 0; i < node->key_num; i++)
+		{
+		for(int j =0;j<=depth;j++)
+			cout<<" ";
+		cout<<"-";
+		cout << node->key[i] <<endl;
+		
+		}
+	}
 	else
+	{
+
+			for(int j =0;j<=depth-1;j++)
+				cout<<" ";
+			cout<<" "<<" key number is "<<node->key_num<<endl;	
+	
 		for (int i = 0; i <= node->key_num; i++)
-			print_bpt((bpt_node<T> *)node->pointer[i]);
+		{
+			for(int j =0;j<=depth;j++)
+				cout<<" ";
+			cout<<" "<<"key value is "<<node->key[i]<<endl;	
+			print_bpt((bpt_node<T> *)node->pointer[i],depth+1);
+			for(int j =0;j<=depth+1;j++)
+				cout<<" ";
+			cout<<"|"<<endl;
+		}
+	}
 }
 
 template<typename T>
 void BplusTree<T>::print()
 {
-	print_bpt<T>(root);
+	cout<<"here starts the structure"<<endl;
+
+	print_bpt<T>(root,0);
+	cout<<endl;
 }
 
 int flag_para;
@@ -305,12 +351,12 @@ void set_offset(bpt_node<T> * node)
 		return;
 	if (node->is_leaf){
 		for (int i = 1; i <= node->key_num; i++){
-			//Call buffer manager to calculate the offset of the record
+			//TODO:Call buffer manager to calculate the offset of the record
 		}
 	}
 	else
 		for (int i = 0; i <= node->key_num; i++)
-			set_offset(table_name, (bpt_node<T> *)node->pointer[i]);
+			set_offset((bpt_node<T> *)node->pointer[i]);
 }
 
 template<typename T>
